@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPACE RACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#070b1e;--panel:#10173a;--line:#26316b;--text:#e8ecff;--dim:#8d97c9;--accent:#ffb020;--good:#3ddc97;--bad:#ff5d73;--blue:#5aa0ff}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:radial-gradient(ellipse at top,#16215a,var(--bg) 60%);color:var(--text);min-height:100vh}
+#stars{position:fixed;inset:0;z-index:-1;pointer-events:none}
+.wrap{max-width:960px;margin:0 auto;padding:20px}
+h1{font-family:'Press Start 2P','Courier New',monospace;font-weight:400;letter-spacing:.08em;text-align:center;margin:18px 0 14px;font-size:clamp(1.3rem,5vw,2.4rem);line-height:1.3;color:var(--accent);text-shadow:4px 4px 0 #b3411a,8px 8px 0 #12182f;-webkit-font-smoothing:none;font-smooth:never;image-rendering:pixelated}
+.sub{text-align:center;color:var(--dim);margin-bottom:22px}
+.grid{display:grid;grid-template-columns:1fr 340px;gap:16px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h2{margin:0 0 12px;font-size:1rem;letter-spacing:.15em;color:var(--dim)}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:12px 18px;font-weight:700;background:var(--accent);color:#1b1200}
+button.sec{background:#1d2766;color:var(--text);border:1px solid var(--line)}
+button:disabled{opacity:.5;cursor:not-allowed}
+input{font:inherit;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0a1030;color:var(--text);width:100%}
+.row{display:flex;gap:10px;margin:10px 0;flex-wrap:wrap}
+.row>*{flex:1}
+.hidden{display:none!important}
+.code{font-family:'Press Start 2P','Courier New',monospace;font-size:1.6rem;letter-spacing:.2em;font-weight:400;text-align:center;color:var(--accent);margin:6px 0}
+.link{word-break:break-all;font-size:.85rem;background:#0a1030;border:1px dashed var(--line);padding:10px;border-radius:8px;color:var(--blue)}
+.opt{display:block;width:100%;text-align:left;margin:8px 0;background:#1d2766;color:var(--text);border:1px solid var(--line)}
+.opt.good{background:var(--good);color:#04200f}.opt.bad{background:var(--bad);color:#2b000a}
+.q{font-size:1.25rem;margin:8px 0 14px}
+.meta{display:flex;justify-content:space-between;color:var(--dim);font-size:.9rem}
+.track{position:relative;height:30px;background:#0a1030;border-radius:15px;margin:8px 0;border:1px solid var(--line)}
+.rocket{position:absolute;top:2px;font-size:20px;transition:left .5s;transform:translateX(-4px)}
+.tname{position:absolute;right:12px;top:6px;font-size:.75rem;color:var(--dim)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+td,th{padding:7px 4px;text-align:left;border-bottom:1px solid var(--line)}
+th{color:var(--dim);font-weight:600;font-size:.75rem}
+tr.me td{color:var(--accent);font-weight:700}
+.big{font-size:3rem;text-align:center;font-weight:800;color:var(--accent)}
+.tag{font-size:.7rem;background:#1d2766;border-radius:6px;padding:2px 6px;margin-left:4px;color:var(--dim)}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="wrap">
+  <h1>SPACE RACE</h1>
+  <div class="sub">Answer faster and more accurately than your crew</div>
+
+  <!-- HOME -->
+  <div id="home" class="card" style="max-width:480px;margin:auto">
+    <h2>YOUR CALLSIGN</h2>
+    <input id="name" maxlength="16" placeholder="Display name">
+    <div class="row"><button id="btnCreate">CREATE PARTY</button><button class="sec" id="btnSolo">SOLO FLIGHT</button></div>
+    <h2 style="margin-top:20px">JOIN A PARTY</h2>
+    <div class="row"><input id="joinCode" maxlength="5" placeholder="ROOM CODE" style="text-transform:uppercase"><button class="sec" id="btnJoin" style="flex:0 0 auto">JOIN</button></div>
+    <div id="homeErr" style="color:var(--bad);min-height:1.2em"></div>
+  </div>
+
+  <!-- PARTY -->
+  <div id="party" class="grid hidden">
+    <div>
+      <!-- LOBBY -->
+      <div id="lobby" class="card">
+        <h2>PARTY LOBBY</h2>
+        <div class="code" id="roomCode"></div>
+        <div class="link" id="inviteLink"></div>
+        <div class="row"><button id="btnCopy">COPY INVITE LINK</button></div>
+        <p id="lobbyHint" style="color:var(--dim)"></p>
+        <div class="row"><button id="btnStart" class="hidden">START RACE</button><button class="sec" id="btnLeave">LEAVE</button></div>
+      </div>
+      <!-- GAME -->
+      <div id="game" class="card hidden">
+        <div class="meta"><span id="qNum"></span><span id="timer"></span></div>
+        <div class="q" id="qText"></div>
+        <div id="opts"></div>
+      </div>
+      <!-- RESULTS -->
+      <div id="results" class="card hidden">
+        <h2>FLIGHT COMPLETE</h2>
+        <div class="big" id="resScore"></div>
+        <p style="text-align:center;color:var(--dim)" id="resSub"></p>
+        <div class="row"><button id="btnAgain" class="hidden">RACE AGAIN</button><button class="sec" id="btnHome">MAIN MENU</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>LIVE LEADERBOARD</h2>
+      <div id="tracks"></div>
+      <table><thead><tr><th>#</th><th>PILOT</th><th>CORRECT</th><th>TIME</th></tr></thead><tbody id="board"></tbody></table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   FIREBASE SETUP (needed for real online multiplayer)
+   1. Go to console.firebase.google.com -> create project
+   2. Build -> Realtime Database -> Create database (test mode to start)
+   3. Project settings -> Your apps -> Web app -> copy the config
+   4. Paste the values below. Leave apiKey as "" to use LOCAL mode
+      (local mode only syncs between tabs on the same browser - for testing).
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  databaseURL: "",   // e.g. https://your-project-default-rtdb.firebaseio.com
+  projectId: "",
+  appId: ""
+};
+
+/* ---------------- questions ---------------- */
+const QUESTIONS = [
+  ["Which planet is known as the Red Planet?",["Venus","Mars","Jupiter","Mercury"],1],
+  ["What is the closest star to Earth?",["Sirius","Proxima Centauri","The Sun","Betelgeuse"],2],
+  ["Who was the first human in space?",["Neil Armstrong","Buzz Aldrin","Yuri Gagarin","Alan Shepard"],2],
+  ["Which planet has the most prominent rings?",["Saturn","Neptune","Mars","Earth"],0],
+  ["What year did humans first land on the Moon?",["1965","1969","1972","1975"],1],
+  ["What is the largest planet in our solar system?",["Saturn","Earth","Jupiter","Uranus"],2],
+  ["Our galaxy is called the…",["Andromeda","Milky Way","Triangulum","Whirlpool"],1],
+  ["How many planets are in our solar system?",["7","8","9","10"],1],
+  ["What force keeps planets orbiting the Sun?",["Magnetism","Friction","Gravity","Inertia only"],2],
+  ["Which planet is closest to the Sun?",["Mercury","Venus","Earth","Mars"],0],
+  ["What is the Moon's approximate distance from Earth?",["38,400 km","384,000 km","3,840,000 km","38,400,000 km"],1],
+  ["What is a light-year a measure of?",["Time","Speed","Distance","Brightness"],2],
+  ["Which planet spins on its side?",["Uranus","Mars","Mercury","Jupiter"],0],
+  ["What is the hottest planet in the solar system?",["Mercury","Venus","Mars","Jupiter"],1],
+  ["What is the name of NASA's Mars rover that landed in 2021?",["Curiosity","Opportunity","Perseverance","Spirit"],2]
+];
+const PER_FLIGHT = 10;
+
+/* ---------------- helpers ---------------- */
+const $ = id => document.getElementById(id);
+const show = (id, on=true) => $(id).classList.toggle('hidden', !on);
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function seededOrder(seed){
+  const r=mulberry(seed), idx=QUESTIONS.map((_,i)=>i);
+  for(let i=idx.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]]}
+  return idx.slice(0,PER_FLIGHT);
+}
+const fmt = ms => (ms/1000).toFixed(1)+'s';
+const uid = () => Math.random().toString(36).slice(2,10);
+const genCode = () => { const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; };
+
+/* ---------------- backends ---------------- */
+function makeFirebaseBackend(){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.database();
+  let ref, offs = [];
+  return {
+    name:'Online (Firebase)',
+    async exists(code){ return (await db.ref('rooms/'+code+'/meta').get()).exists(); },
+    async create(code, meta){ await db.ref('rooms/'+code+'/meta').set(meta); },
+    open(code, onMeta, onPlayers){
+      ref = db.ref('rooms/'+code);
+      const m = ref.child('meta'), p = ref.child('players');
+      m.on('value', s => onMeta(s.val()));
+      p.on('value', s => onPlayers(s.val() || {}));
+      offs = [()=>m.off(), ()=>p.off()];
+    },
+    setMeta(patch){ return ref.child('meta').update(patch); },
+    setPlayer(id, data){ return ref.child('players/'+id).update(data); },
+    async resetPlayers(ids){ const u={}; ids.forEach(i=>{u[i+'/correct']=0;u[i+'/answered']=0;u[i+'/time']=0;u[i+'/finished']=false}); return ref.child('players').update(u); },
+    removePlayer(id){ return ref.child('players/'+id).remove(); },
+    onLeaveRemove(id){ ref.child('players/'+id).onDisconnect().remove(); },
+    close(){ offs.forEach(f=>f()); }
+  };
+}
+function makeLocalBackend(){
+  // Same-browser multi-tab testing only.
+  let key, onM, onP;
+  const read = () => JSON.parse(localStorage.getItem(key) || '{"meta":null,"players":{}}');
+  const write = d => { localStorage.setItem(key, JSON.stringify(d)); fire(); };
+  const fire = () => { const d = read(); onM && onM(d.meta); onP && onP(d.players||{}); };
+  const handler = e => { if(e.key===key) fire(); };
+  return {
+    name:'Local test mode (same browser tabs only) — add Firebase config for real online play',
+    async exists(code){ return !!JSON.parse(localStorage.getItem('sr_room_'+code)||'null')?.meta; },
+    async create(code, meta){ localStorage.setItem('sr_room_'+code, JSON.stringify({meta,players:{}})); },
+    open(code, m, p){ key='sr_room_'+code; onM=m; onP=p; window.addEventListener('storage', handler); fire(); },
+    setMeta(patch){ const d=read(); d.meta={...d.meta,...patch}; write(d); },
+    setPlayer(id, data){ const d=read(); d.players=d.players||{}; d.players[id]={...(d.players[id]||{}),...data}; write(d); },
+    resetPlayers(ids){ const d=read(); ids.forEach(i=>{ if(d.players[i]) Object.assign(d.players[i],{correct:0,answered:0,time:0,finished:false}) }); write(d); },
+    removePlayer(id){ const d=read(); delete d.players[id]; write(d); },
+    onLeaveRemove(id){ window.addEventListener('beforeunload',()=>{ const d=read(); delete d.players[id]; localStorage.setItem(key,JSON.stringify(d)); }); },
+    close(){ window.removeEventListener('storage', handler); onM=onP=null; }
+  };
+}
+let backend = null;
+async function initBackend(){
+  if(FIREBASE_CONFIG.apiKey){
+    const load = src => new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)});
+    try{
+      await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+      await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js');
+      backend = makeFirebaseBackend();
+    }catch(e){ console.error(e); backend = makeLocalBackend(); }
+  } else backend = makeLocalBackend();
+}
+
+/* ---------------- state ---------------- */
+let me = { id: uid(), name:'' };
+let room = null;        // {code, isHost}
+let meta = null, players = {};
+let run = null;         // current flight {order, i, correct, t0, tick}
+let solo = false;
+
+/* ---------------- party flow ---------------- */
+function getName(){
+  const n = $('name').value.trim();
+  if(!n){ $('homeErr').textContent='Enter a display name first.'; return null; }
+  me.name = n; localStorage.setItem('sr_name', n); $('homeErr').textContent=''; return n;
+}
+function inviteUrl(code){ return location.origin + location.pathname + '?room=' + code; }
+
+async function createParty(){
+  if(!getName()) return;
+  let code; do { code = genCode(); } while(await backend.exists(code));
+  await backend.create(code, { host: me.id, state:'lobby', seed: 0, created: Date.now() });
+  await enterRoom(code, true);
+}
+async function joinParty(){
+  if(!getName()) return;
+  const code = $('joinCode').value.trim().toUpperCase();
+  if(code.length!==5){ $('homeErr').textContent='Room codes are 5 characters.'; return; }
+  if(!(await backend.exists(code))){ $('homeErr').textContent='No party found with that code.'; return; }
+  await enterRoom(code, false);
+}
+async function enterRoom(code, isHost){
+  solo = false;
+  room = { code, isHost };
+  show('home', false); show('party');
+  show('lobby'); show('game', false); show('results', false);
+  $('roomCode').textContent = code;
+  $('inviteLink').textContent = inviteUrl(code);
+  backend.open(code, onMeta, onPlayers);
+  await backend.setPlayer(me.id, { name: me.name, correct:0, answered:0, time:0, finished:false, joined: Date.now() });
+  backend.onLeaveRemove(me.id);
+  history.replaceState(null,'','?room='+code);
+}
+
+function onMeta(m){
+  if(!m) return;
+  meta = m;
+  room.isHost = (m.host === me.id);
+  if(m.state === 'racing' && !run && $('results').classList.contains('hidden')){
+    startCountdown(m.seed);
+  }
+  if(m.state === 'lobby' && !$('results').classList.contains('hidden')){
+    show('results', false); show('lobby');
+    backend.setPlayer(me.id, { correct:0, answered:0, time:0, finished:false });
+  }
+  renderLobby();
+}
+function onPlayers(p){ players = p; renderBoard(); renderLobby(); checkEnd(); }
+
+function renderLobby(){
+  const n = Object.keys(players).length;
+  const host = room && room.isHost;
+  $('btnStart').classList.toggle('hidden', !host || meta?.state!=='lobby');
+  $('lobbyHint').textContent = host
+    ? `${n} pilot${n===1?'':'s'} in the crew. Share the link, then start when everyone is in.`
+    : `${n} pilot${n===1?'':'s'} in the crew. Waiting for the host to start the race…`;
+  $('btnAgain').classList.toggle('hidden', !host);
+}
+
+$('btnStart').onclick = () => backend.setMeta({ state:'racing', seed: Math.floor(Math.random()*1e9), startedAt: Date.now() });
+$('btnAgain').onclick = async () => { await backend.resetPlayers(Object.keys(players)); await backend.setMeta({ state:'lobby' }); };
+$('btnCopy').onclick = async () => {
+  const url = inviteUrl(room.code);
+  try { await navigator.clipboard.writeText(url); }
+  catch(e){ const ta=document.createElement('textarea'); ta.value=url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  $('btnCopy').textContent='COPIED ✓'; setTimeout(()=>$('btnCopy').textContent='COPY INVITE LINK',1500);
+};
+$('btnLeave').onclick = leaveRoom;
+$('btnHome').onclick = leaveRoom;
+function leaveRoom(){
+  if(room){ backend.removePlayer(me.id); backend.close(); }
+  room=null; meta=null; players={}; run=null; solo=false;
+  history.replaceState(null,'',location.pathname);
+  show('party', false); show('home');
+}
+
+/* ---------------- flight ---------------- */
+function startCountdown(seed){
+  show('lobby', false); show('results', false); show('game');
+  $('opts').innerHTML=''; $('qText').textContent='Get ready…'; $('qNum').textContent='';
+  let n=3; $('timer').textContent='';
+  run = { counting:true };
+  const iv = setInterval(()=>{
+    $('qText').textContent = n>0 ? `Launch in ${n}…` : 'LIFTOFF! 🚀';
+    if(n<0){ clearInterval(iv); beginFlight(seed); }
+    n--;
+  }, 800);
+}
+function beginFlight(seed){
+  run = { order: seededOrder(seed), i:0, correct:0, t0: performance.now(), done:false };
+  run.tick = setInterval(()=>{ $('timer').textContent = '⏱ '+fmt(performance.now()-run.t0); }, 100);
+  showQuestion();
+}
+function showQuestion(){
+  const [q, opts, ans] = QUESTIONS[run.order[run.i]];
+  $('qNum').textContent = `Question ${run.i+1} / ${PER_FLIGHT}`;
+  $('qText').textContent = q;
+  $('opts').innerHTML = '';
+  opts.forEach((o,k)=>{
+    const b = document.createElement('button');
+    b.className='opt'; b.textContent=o;
+    b.onclick = () => answer(k, ans, b);
+    $('opts').appendChild(b);
+  });
+}
+function answer(k, ans, btn){
+  if(run.locked) return; run.locked = true;
+  const ok = k===ans;
+  btn.classList.add(ok?'good':'bad');
+  if(!ok) [...$('opts').children][ans].classList.add('good');
+  if(ok) run.correct++;
+  run.i++;
+  const finished = run.i >= PER_FLIGHT;
+  const time = Math.round(performance.now()-run.t0);
+  const upd = { correct: run.correct, answered: run.i, time, finished };
+  if(solo) players[me.id] = { ...(players[me.id]||{name:me.name}), ...upd }, renderBoard();
+  else backend.setPlayer(me.id, upd);
+  setTimeout(()=>{
+    run.locked = false;
+    if(finished){ finishFlight(time); } else showQuestion();
+  }, 700);
+}
+function finishFlight(time){
+  clearInterval(run.tick);
+  run.done = true;
+  show('game', false); show('results');
+  $('resScore').textContent = `${run.correct} / ${PER_FLIGHT}`;
+  $('resSub').textContent = `Flight time ${fmt(time)} · accuracy ${Math.round(run.correct/PER_FLIGHT*100)}%`;
+  $('btnAgain').classList.toggle('hidden', solo ? false : !(room && room.isHost));
+  checkEnd();
+}
+function checkEnd(){
+  if(!run?.done || solo) return;
+  const all = Object.values(players);
+  const waiting = all.filter(p=>!p.finished).length;
+  if(waiting>0) $('resSub').textContent += ` · waiting for ${waiting} pilot${waiting===1?'':'s'}…`;
+}
+
+/* ---------------- leaderboard ---------------- */
+function sorted(){
+  return Object.entries(players).sort((a,b)=>{
+    const A=a[1],B=b[1];
+    if((B.correct||0)!==(A.correct||0)) return (B.correct||0)-(A.correct||0);
+    // ties: finished runs rank by time, unfinished by progress
+    if(!!B.finished!==!!A.finished) return B.finished?1:-1;
+    return (A.time||0)-(B.time||0);
+  });
+}
+function renderBoard(){
+  const list = sorted();
+  const body = $('board'); body.innerHTML='';
+  const tracks = $('tracks'); tracks.innerHTML='';
+  list.forEach(([id,p],i)=>{
+    const tr = document.createElement('tr'); if(id===me.id) tr.className='me';
+    const cells = [i+1, p.name||'?', `${p.correct||0}/${p.answered||0}`, p.answered ? fmt(p.time||0) : '–'];
+    cells.forEach((c,ci)=>{ const td=document.createElement('td'); td.textContent=c;
+      if(ci===1 && p.finished){ const t=document.createElement('span'); t.className='tag'; t.textContent='DONE'; td.appendChild(t); }
+      if(ci===1 && meta && meta.host===id){ const t=document.createElement('span'); t.className='tag'; t.textContent='HOST'; td.appendChild(t); }
+      tr.appendChild(td); });
+    body.appendChild(tr);
+    const tk = document.createElement('div'); tk.className='track';
+    const pct = Math.min(100, ((p.answered||0)/PER_FLIGHT)*92);
+    tk.innerHTML = `<span class="rocket" style="left:${pct}%">🚀</span><span class="tname"></span>`;
+    tk.querySelector('.tname').textContent = p.name||'?';
+    tracks.appendChild(tk);
+  });
+}
+
+/* ---------------- solo ---------------- */
+$('btnSolo').onclick = () => {
+  if(!getName()) return;
+  solo = true; room = null; meta = null;
+  players = { [me.id]: { name: me.name, correct:0, answered:0, time:0, finished:false } };
+  show('home', false); show('party'); show('lobby', false); show('results', false);
+  renderBoard();
+  startCountdown(Math.floor(Math.random()*1e9));
+};
+$('btnAgain').addEventListener('click', () => {
+  if(solo){
+    players[me.id] = { name: me.name, correct:0, answered:0, time:0, finished:false };
+    run=null; show('results', false); renderBoard();
+    startCountdown(Math.floor(Math.random()*1e9));
+  }
+}, true);
+$('btnCreate').onclick = createParty;
+$('btnJoin').onclick = joinParty;
+
+/* ---------------- boot ---------------- */
+(async function(){
+  $('name').value = localStorage.getItem('sr_name') || '';
+  await initBackend();
+  const r = new URLSearchParams(location.search).get('room');
+  if(r){ $('joinCode').value = r.toUpperCase(); $('homeErr').textContent='You were invited! Enter your name and press JOIN.'; $('homeErr').style.color='var(--good)'; }
+})();
+
+/* ---------------- starfield ---------------- */
+(function(){
+  const c=$('stars'), x=c.getContext('2d'); let S=[];
+  function size(){ c.width=innerWidth; c.height=innerHeight; S=Array.from({length:120},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.5+.3,v:Math.random()*.4+.1})); }
+  size(); addEventListener('resize',size);
+  (function f(){ x.clearRect(0,0,c.width,c.height); x.fillStyle='#fff'; S.forEach(s=>{ s.y+=s.v; if(s.y>c.height){s.y=0;s.x=Math.random()*c.width} x.globalAlpha=.4+s.r/3; x.beginPath(); x.arc(s.x,s.y,s.r,0,7); x.fill(); }); requestAnimationFrame(f); })();
+})();
+</script>
+</body>
+</html>
